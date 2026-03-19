@@ -1,5 +1,6 @@
 import java.sql.Statement;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Scanner;
 
@@ -11,20 +12,18 @@ public class TaskDao {
     }
 
     public void showTask() {
-        try {
+        String sql = "SELECT * FROM tasks";
+        try (
             Statement stmt = conn.createStatement();
-
-            String sql = "SELECT * FROM tasks";
-
-            ResultSet rs = stmt.executeQuery(sql);
+            ResultSet rs = stmt.executeQuery(sql)) {
 
             while(rs.next()) {
                 Task task = new Task();
-                task.id = rs.getInt("id");
-                task.title = rs.getString("title");
-                task.completed = rs.getBoolean("completed");
-                
-                System.out.println(task.id + " " + task.title + " " + task.completed);
+                task.setId(rs.getInt("id"));
+                task.setTitle(rs.getString("title"));
+                task.setCompleted(rs.getBoolean("completed"));
+
+                System.out.println(task.getId() + " " + task.getTitle() + " " + task.getCompleted());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -32,18 +31,18 @@ public class TaskDao {
     }
 
     public void showIncompleteTask() {
-        try {
+        String sql = "SELECT * FROM tasks WHERE completed = false";
+        try (
             Statement stmt = conn.createStatement();
-            String sql = "SELECT * FROM tasks WHERE completed = false";
-            ResultSet rs = stmt.executeQuery(sql);
+            ResultSet rs = stmt.executeQuery(sql)) {
 
             while(rs.next()) {
                 Task task = new Task();
-                task.id = rs.getInt("id");
-                task.title = rs.getString("title");
-                task.completed = rs.getBoolean("completed");
+                task.setId(rs.getInt("id"));
+                task.setTitle(rs.getString("title"));
+                task.setCompleted(rs.getBoolean("completed"));
 
-                System.out.println(task.id + " " + task.title + " " + task.completed);
+                System.out.println(task.getId() + " " + task.getTitle() + " " + task.getCompleted());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -51,13 +50,14 @@ public class TaskDao {
     }
 
     public void addTask(Scanner scanner) {
-        try {
-            System.out.print("追加するタスク: ");
-            Statement stmt = conn.createStatement();
-            scanner.nextLine();
+        System.out.print("追加するタスク: ");
+        scanner.nextLine();
+        String sql = "INSERT INTO tasks(title, completed) VALUES (?, false)";
+        try ( 
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
             String word = scanner.nextLine();
-            String sql = "INSERT INTO tasks(title, completed) VALUES ('" + word + "', false)";
-            stmt.executeUpdate(sql);
+            pstmt.setString(1, word);
+            pstmt.executeUpdate(); 
             System.out.println("追加しました");
         } catch (Exception e) {
             e.printStackTrace();
@@ -65,12 +65,13 @@ public class TaskDao {
     }
 
     public void completedTask(Scanner scanner) {
-        try {
-            System.out.print("完了したタスクid: ");
-            Statement stmt = conn.createStatement();
+        System.out.print("完了したタスクid: ");
+        String sql = "UPDATE tasks SET completed = true WHERE id = ?";
+        try (
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
             int num = scanner.nextInt();
-            String sql = "UPDATE tasks SET completed = true WHERE id = " + num;
-            stmt.executeUpdate(sql);
+            pstmt.setInt(1, num);
+            pstmt.executeUpdate();
             System.out.println("完了しました");
         } catch (Exception e) {
             e.printStackTrace();
@@ -78,12 +79,13 @@ public class TaskDao {
     }
 
     public void deleteTask(Scanner scanner) {
-        try {
-            System.out.print("削除するタスクid: ");
-            Statement stmt = conn.createStatement();
+        System.out.print("削除するタスクid: ");
+        String sql = "DELETE FROM tasks WHERE id = ?";
+        try (
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
             int num = scanner.nextInt();
-            String sql = "DELETE FROM tasks WHERE id = " + num;
-            stmt.executeUpdate(sql);
+            pstmt.setInt(1, num);
+            pstmt.executeUpdate();
             System.out.println("削除しました");
         } catch (Exception e) {
             e.printStackTrace();
@@ -91,21 +93,24 @@ public class TaskDao {
     }
 
     public void searchTask(Scanner scanner) {
-        try {
-            System.out.print("検索するワード: ");
-            Statement stmt = conn.createStatement();
+        System.out.print("検索するワード: ");
+        String sql = "SELECT * FROM tasks WHERE title LIKE ?";
+        try (
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
             scanner.nextLine();
             String word = scanner.nextLine();
-            String sql = "SELECT * FROM tasks WHERE title LIKE '%" + word + "%'";
-            ResultSet rs = stmt.executeQuery(sql);
+            pstmt.setString(1, "%" + word + "%");
 
-            while(rs.next()) {
-                Task task = new Task();
-                task.id = rs.getInt("id");
-                task.title = rs.getString("title");
-                task.completed = rs.getBoolean("completed");
+            try (
+                ResultSet rs = pstmt.executeQuery()) {
+                    while(rs.next()) {
+                    Task task = new Task();
+                    task.setId(rs.getInt("id"));
+                    task.setTitle(rs.getString("title"));
+                    task.setCompleted(rs.getBoolean("completed"));
 
-                System.out.println(task.id + " " + task.title + " " + task.completed);
+                    System.out.println(task.getId() + " " + task.getTitle() + " " + task.getCompleted());
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
